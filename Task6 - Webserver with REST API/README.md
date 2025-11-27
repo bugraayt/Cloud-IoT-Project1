@@ -8,3 +8,5 @@ https://smarthouseprojectceren.azurewebsites.net/api/hello?code=LLDfJIwqpLcfQ_0x
 
 https://smarthouseprojectceren.azurewebsites.net/api/light?code=sREH0ZwJ8HBB9v9oyCiGlA8O4CkNM0AMTP52S01VzI0AAzFu2Xb0bQ==
 
+
+You can also see the screenshot of the resource group and links I created.
