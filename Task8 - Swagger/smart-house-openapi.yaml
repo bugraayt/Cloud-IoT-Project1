@@ -1,0 +1,272 @@
+openapi: 3.0.0
+info:
+  title: Smart House API
+  version: 1.0.0
+  description: >
+    Smart House system running on Azure Functions.
+    Provides endpoints for house status, light control and telemetry.
+    Data is stored in Azure Cosmos DB.
+
+servers:
+  - url: https://smarthouseprojectceren.azurewebsites.net
+    description: Azure Functions deployment
+
+
+paths:
+  /api/hello:
+    get:
+      summary: Health check / demo endpoint
+      description: Simple hello endpoint to verify that the Function App is running.
+      tags:
+        - System
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Azure Functions authorization code.
+      responses:
+        '200':
+          description: Hello message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Hello from Smart House Function!"
+            text/plain:
+              schema:
+                type: string
+                example: "Hello from Smart House Function!"
+
+  /api/house/status:
+    get:
+      summary: Get current Smart House status
+      description: >
+        Returns high-level information about the Smart House:
+        rooms, devices and overall status (e.g. mode, alarms, connectivity).
+      tags:
+        - House
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Azure Functions authorization code.
+      responses:
+        '200':
+          description: Current Smart House status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HouseStatus'
+
+  /api/light:
+    get:
+      summary: Get current light status
+      description: >
+        Returns the current state of one or more lights in the Smart House.
+      tags:
+        - Light
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Azure Functions authorization code.
+        - in: query
+          name: room
+          required: false
+          schema:
+            type: string
+          description: Optional room filter (e.g. 'Living Room').
+      responses:
+        '200':
+          description: Current light status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LightStatus'
+
+    post:
+      summary: Change light state
+      description: >
+        Sends a command to change the light state (on/off, brightness, etc.).
+        The Function can forward this command to the corresponding IoT device.
+      tags:
+        - Light
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Azure Functions authorization code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LightCommand'
+      responses:
+        '200':
+          description: Light command accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LightStatus'
+        '400':
+          description: Invalid command data
+
+  /api/telemetry:
+    get:
+      summary: Get telemetry data
+      description: >
+        Returns recent telemetry records from Smart House devices
+        (temperature, humidity, etc.) stored in Cosmos DB.
+      tags:
+        - Telemetry
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          description: Azure Functions authorization code.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            example: 50
+          description: Optional limit of records to return.
+        - in: query
+          name: deviceId
+          required: false
+          schema:
+            type: string
+          description: Optional filter by device identifier.
+      responses:
+        '200':
+          description: List of telemetry records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Telemetry'
+
+components:
+  schemas:
+    HouseStatus:
+      type: object
+      properties:
+        houseId:
+          type: string
+          example: "house-001"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-12-02T18:30:00Z"
+        overallMode:
+          type: string
+          example: "AUTO"
+        alarmsActive:
+          type: boolean
+          example: false
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomStatus'
+
+    RoomStatus:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Living Room"
+        temperature:
+          type: number
+          example: 21.8
+        humidity:
+          type: number
+          example: 45.2
+        lightOn:
+          type: boolean
+          example: true
+        windowOpen:
+          type: boolean
+          example: false
+        devicesOnline:
+          type: integer
+          example: 3
+
+    LightStatus:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          example: "light-001"
+        room:
+          type: string
+          example: "Bedroom"
+        isOn:
+          type: boolean
+          example: true
+        brightness:
+          type: integer
+          example: 80
+        lastChanged:
+          type: string
+          format: date-time
+          example: "2025-12-02T18:35:00Z"
+
+    LightCommand:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          example: "light-001"
+        action:
+          type: string
+          description: Desired action for the light
+          example: "on"
+          enum:
+            - on
+            - off
+            - toggle
+        brightness:
+          type: integer
+          description: Optional brightness level from 0 to 100
+          example: 70
+
+    Telemetry:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          example: "device-001"
+        room:
+          type: string
+          example: "Living Room"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-12-02T18:32:10Z"
+        temperature:
+          type: number
+          example: 22.5
+        humidity:
+          type: number
+          example: 43.7
+        energyUsage:
+          type: number
+          description: Optional energy usage in watts
+          example: 15.2
